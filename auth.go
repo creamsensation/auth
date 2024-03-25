@@ -30,7 +30,7 @@ type Manager interface {
 type In struct {
 	Token string
 	Ok    bool
-	Tfa   bool
+	Tfa   bool `json:"tfa"`
 }
 
 type manager struct {
@@ -144,9 +144,9 @@ func (m *manager) Tfa() TfaManager {
 
 func (m *manager) User() UserManager {
 	session := m.Session().MustGet()
-	return createUserManager(m.db, session.Id, session.Email)
+	return CreateUserManager(m.db, m.cache, session.Id, session.Email)
 }
 
 func (m *manager) CustomUser(id int, email string) UserManager {
-	return createUserManager(m.db, id, email)
+	return CreateUserManager(m.db, m.cache, id, email)
 }

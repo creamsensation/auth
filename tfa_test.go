@@ -14,6 +14,7 @@ import (
 	
 	"github.com/creamsensation/cache"
 	"github.com/creamsensation/cookie"
+	
 	"github.com/creamsensation/quirk"
 )
 
@@ -23,7 +24,7 @@ func TestTfa(t *testing.T) {
 	assert.NotNil(t, redis)
 	assert.NoError(t, DropTable(quirk.New(db)))
 	assert.NoError(t, CreateTable(quirk.New(db)))
-	um := createUserManager(db, 0, "")
+	um := CreateUserManager(db, nil, 0, "")
 	_, err := um.Create(
 		User{
 			Active:   true,

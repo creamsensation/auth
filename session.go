@@ -13,13 +13,13 @@ import (
 
 type SessionManager interface {
 	Exists() (bool, error)
-	Get() (Session, error)
+	Get(token ...string) (Session, error)
 	New(user User) (string, error)
 	Renew() error
 	Destroy() error
 	
 	MustExists() bool
-	MustGet() Session
+	MustGet(token ...string) Session
 	MustNew(user User) string
 	MustRenew()
 	MustDestroy()
@@ -79,15 +79,21 @@ func (s sessionManager) MustExists() bool {
 	return exists
 }
 
-func (s sessionManager) Get() (Session, error) {
+func (s sessionManager) Get(token ...string) (Session, error) {
+	var t string
 	var r Session
-	token := s.cookie.Get(SessionCookieKey)
-	err := s.cache.Get(createSessionCacheKey(token), &r)
+	if len(token) == 0 {
+		t = s.cookie.Get(SessionCookieKey)
+	}
+	if len(token) > 0 {
+		t = token[0]
+	}
+	err := s.cache.Get(createSessionCacheKey(t), &r)
 	return r, err
 }
 
-func (s sessionManager) MustGet() Session {
-	r, err := s.Get()
+func (s sessionManager) MustGet(token ...string) Session {
+	r, err := s.Get(token...)
 	if err != nil {
 		panic(err)
 	}

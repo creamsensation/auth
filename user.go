@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 	
+	"github.com/creamsensation/cache"
+	"github.com/dchest/uniuri"
 	"github.com/matthewhartstonge/argon2"
 	
 	"github.com/creamsensation/quirk"
@@ -16,6 +18,7 @@ type UserManager interface {
 	Get(id ...int) (User, error)
 	Create(r User) (int, error)
 	Update(r User, columns ...string) error
+	ResetPassword(token ...string) (string, error)
 	UpdatePassword(actualPassword, newPassword string) error
 	ForceUpdatePassword(newPassword string) error
 	Enable(id ...int) error
@@ -24,6 +27,7 @@ type UserManager interface {
 	MustGet(id ...int) User
 	MustCreate(r User) int
 	MustUpdate(r User, columns ...string)
+	MustResetPassword(token ...string) string
 	MustUpdatePassword(actualPassword, newPassword string)
 	MustForceUpdatePassword(newPassword string)
 	MustEnable(id ...int)
@@ -47,6 +51,7 @@ type User struct {
 
 type userManager struct {
 	db         *quirk.DB
+	cache      cache.Client
 	id         int
 	email      string
 	driverName string
@@ -79,9 +84,10 @@ var (
 	argon = argon2.DefaultConfig()
 )
 
-func createUserManager(db *quirk.DB, id int, email string) UserManager {
+func CreateUserManager(db *quirk.DB, cache cache.Client, id int, email string) UserManager {
 	return &userManager{
 		db:         db,
+		cache:      cache,
 		email:      email,
 		id:         id,
 		data:       make(map[string]any),
@@ -162,6 +168,29 @@ func (u *userManager) MustUpdate(r User, columns ...string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (u *userManager) ResetPassword(token ...string) (string, error) {
+	if len(token) > 0 {
+		var r User
+		err := u.cache.Get(u.createResetPasswordKey(token[0]), &r)
+		u.email = r.Email
+		return r.Email, err
+	}
+	t := uniuri.New()
+	return t, u.cache.Set(
+		u.createResetPasswordKey(t),
+		User{Email: u.email},
+		time.Hour,
+	)
+}
+
+func (u *userManager) MustResetPassword(token ...string) string {
+	t, err := u.ResetPassword(token...)
+	if err != nil {
+		panic(err)
+	}
+	return t
 }
 
 func (u *userManager) UpdatePassword(actualPassword, newPassword string) error {
@@ -379,4 +408,8 @@ func (u *userManager) updateValues() string {
 		}
 	}
 	return strings.Join(result, ",")
+}
+
+func (u *userManager) createResetPasswordKey(token string) string {
+	return "reset-password:" + token
 }

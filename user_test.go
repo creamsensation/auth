@@ -13,7 +13,7 @@ func TestUser(t *testing.T) {
 	assert.NotNil(t, db)
 	assert.NoError(t, DropTable(quirk.New(db)))
 	assert.NoError(t, CreateTable(quirk.New(db)))
-	um := createUserManager(db, 0, "")
+	um := CreateUserManager(db, nil, 0, "")
 	t.Cleanup(
 		func() {
 			assert.NoError(t, DropTable(quirk.New(db)))

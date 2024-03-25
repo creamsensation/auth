@@ -12,6 +12,7 @@ import (
 	
 	"github.com/creamsensation/cache"
 	"github.com/creamsensation/cookie"
+	
 	"github.com/creamsensation/quirk"
 )
 
@@ -43,7 +44,7 @@ func TestAuth(t *testing.T) {
 	)
 	t.Run(
 		"create user", func(t *testing.T) {
-			id, err := createUserManager(db, 0, "").Create(user)
+			id, err := CreateUserManager(db, nil, 0, "").Create(user)
 			assert.NoError(t, err)
 			user.Id = id
 			assert.Equal(t, true, id != 0)
@@ -120,8 +121,8 @@ func TestAuth(t *testing.T) {
 	t.Run(
 		"update user", func(t *testing.T) {
 			u := User{Active: false}
-			assert.NoError(t, createUserManager(db, user.Id, "dominik@linduska.dev").Update(u, "active"))
-			u, err := createUserManager(db, user.Id, "dominik@linduska.dev").Get()
+			assert.NoError(t, CreateUserManager(db, nil, user.Id, "dominik@linduska.dev").Update(u, "active"))
+			u, err := CreateUserManager(db, nil, user.Id, "dominik@linduska.dev").Get()
 			assert.NoError(t, err)
 			assert.Equal(t, false, u.Active)
 		},
