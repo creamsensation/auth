@@ -12,6 +12,7 @@ import (
 )
 
 type SessionManager interface {
+	Token() string
 	Exists() (bool, error)
 	Get(token ...string) (Session, error)
 	New(user User) (string, error)
@@ -63,8 +64,12 @@ func createSessionManager(
 	}
 }
 
+func (s sessionManager) Token() string {
+	return s.cookie.Get(SessionCookieKey)
+}
+
 func (s sessionManager) Exists() (bool, error) {
-	token := s.cookie.Get(SessionCookieKey)
+	token := s.Token()
 	if len(token) == 0 {
 		return false, ErrorMissingSessionCookie
 	}
@@ -83,7 +88,7 @@ func (s sessionManager) Get(token ...string) (Session, error) {
 	var t string
 	var r Session
 	if len(token) == 0 {
-		t = s.cookie.Get(SessionCookieKey)
+		t = s.Token()
 	}
 	if len(token) > 0 {
 		t = token[0]
@@ -118,7 +123,7 @@ func (s sessionManager) MustNew(user User) string {
 }
 
 func (s sessionManager) Renew() error {
-	token := s.cookie.Get(SessionCookieKey)
+	token := s.Token()
 	if len(token) == 0 {
 		return ErrorMissingSessionCookie
 	}
@@ -144,7 +149,7 @@ func (s sessionManager) MustRenew() {
 }
 
 func (s sessionManager) Destroy() error {
-	token := s.cookie.Get(SessionCookieKey)
+	token := s.Token()
 	s.cookie.Set(SessionCookieKey, "", time.Millisecond)
 	return s.cache.Set(createSessionCacheKey(token), "", time.Millisecond)
 }
