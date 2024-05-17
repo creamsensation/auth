@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 	
-	"github.com/creamsensation/cache"
 	"github.com/dchest/uniuri"
 	"github.com/matthewhartstonge/argon2"
+	
+	"github.com/creamsensation/cache"
 	
 	"github.com/creamsensation/quirk"
 )
@@ -338,31 +339,6 @@ func (u *userManager) hashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-func (u *userManager) insertValues() (string, string) {
-	columns := []string{quirk.Id}
-	placeholders := []string{quirk.Default}
-	for name := range u.data {
-		columns = append(columns, name)
-		placeholders = append(placeholders, paramPrefix+name)
-	}
-	switch u.driverName {
-	case quirk.Postgres:
-		if len(u.data) > 0 {
-			columns = append(columns, quirk.Vectors)
-			placeholders = append(placeholders, paramPrefix+quirk.Vectors)
-		}
-	}
-	columns = append(columns, UserLastActivity)
-	placeholders = append(placeholders, quirk.CurrentTimestamp)
-	
-	columns = append(columns, quirk.CreatedAt)
-	placeholders = append(placeholders, quirk.CurrentTimestamp)
-	
-	columns = append(columns, quirk.UpdatedAt)
-	placeholders = append(placeholders, quirk.CurrentTimestamp)
-	return strings.Join(columns, ","), strings.Join(placeholders, ",")
-}
-
 func (u *userManager) args() []quirk.Map {
 	if len(u.data) == 0 {
 		return []quirk.Map{}
@@ -378,10 +354,35 @@ func (u *userManager) args() []quirk.Map {
 	switch u.driverName {
 	case quirk.Postgres:
 		if len(vectors) > 0 {
-			result[quirk.Vectors] = quirk.CreateTsVectors(vectors...)
+			result[quirk.Vectors] = quirk.CreateTsVector(vectors...)
 		}
 	}
 	return []quirk.Map{result}
+}
+
+func (u *userManager) insertValues() (string, string) {
+	columns := []string{quirk.Id}
+	placeholders := []string{quirk.Default}
+	for name := range u.data {
+		columns = append(columns, name)
+		placeholders = append(placeholders, paramPrefix+name)
+	}
+	switch u.driverName {
+	case quirk.Postgres:
+		if len(u.data) > 0 {
+			columns = append(columns, quirk.Vectors)
+			placeholders = append(placeholders, fmt.Sprintf("to_tsvector(%s%s)", paramPrefix, quirk.Vectors))
+		}
+	}
+	columns = append(columns, UserLastActivity)
+	placeholders = append(placeholders, quirk.CurrentTimestamp)
+	
+	columns = append(columns, quirk.CreatedAt)
+	placeholders = append(placeholders, quirk.CurrentTimestamp)
+	
+	columns = append(columns, quirk.UpdatedAt)
+	placeholders = append(placeholders, quirk.CurrentTimestamp)
+	return strings.Join(columns, ","), strings.Join(placeholders, ",")
 }
 
 func (u *userManager) updateValues() string {
@@ -404,7 +405,7 @@ func (u *userManager) updateValues() string {
 			vectors = append(vectors, v)
 		}
 		if len(vectors) > 0 {
-			result = append(result, fmt.Sprintf("%s = %v", quirk.Vectors, quirk.CreateTsVectors(vectors...).Value))
+			result = append(result, fmt.Sprintf("%s = to_tsvector(%s%s)", quirk.Vectors, paramPrefix, quirk.Vectors))
 		}
 	}
 	return strings.Join(result, ",")
